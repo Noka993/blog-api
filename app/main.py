@@ -18,7 +18,7 @@ app.add_middleware(
 
 @app.get("/posts", response_model=list[schemas.PostOut])
 def get_posts(db: Session = Depends(get_db), term: str | None = ""):
-    posts = db.query(models.Post).filter(models.Post.title.contains(term)).all()
+    posts = db.query(models.Post).filter(models.Post.title.contains(term) | models.Post.content.contains(term) | models.Post.category.contains(term)).all()
     return posts
 
 
@@ -40,7 +40,7 @@ def create_post(
     post: schemas.PostCreate,
     db: Session = Depends(get_db)
 ):
-    new_post = models.Post(**post.model_dump)
+    new_post = models.Post(**post.model_dump())
 
     db.add(new_post)
     db.commit()
@@ -60,7 +60,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
             detail=f"post with id: {id} was not found",
         )
 
-    post.delete(synchronize_session=False)
+    post_query.delete(synchronize_session=False)
     db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -70,7 +70,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
     post_query = db.query(models.Post).filter(models.Post.id == id)
     post = post_query.first()
-
+    print(post)
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
